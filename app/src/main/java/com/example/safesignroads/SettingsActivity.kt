@@ -44,7 +44,6 @@ class SettingsActivity : ComponentActivity() {
         }
     }
 
-    // Function to vibrate the phone
     private fun vibratePhone(durationMs: Float) {
         val vibrator = if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.S) {
             val vibratorManager = getSystemService(Context.VIBRATOR_MANAGER_SERVICE) as VibratorManager
@@ -55,17 +54,14 @@ class SettingsActivity : ComponentActivity() {
         }
 
         if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
-            // Android 8.0+ (API 26+)
             val effect = VibrationEffect.createOneShot(durationMs.toLong(), VibrationEffect.DEFAULT_AMPLITUDE)
             vibrator.vibrate(effect)
         } else {
-            // Android 7.0 (API 24-25) - Deprecated method
             @Suppress("DEPRECATION")
             vibrator.vibrate(durationMs.toLong())
         }
     }
 
-    // Function to save vibration duration
     private fun saveVibrationDuration(duration: Float) {
         val sharedPreferences = getSharedPreferences("settings", Context.MODE_PRIVATE)
         sharedPreferences.edit().putFloat("vibration_duration", duration).apply()
@@ -80,20 +76,21 @@ class SettingsActivity : ComponentActivity() {
 @Composable
 fun SettingsScreen(
     vibrationDuration: Float,
-    fontSize: Float,  // Accept font size as a parameter
+    fontSize: Float,
     onVibrate: (Float) -> Unit,
-    onSaveFontSize: (Float) -> Unit,  // Function to save font size
+    onSaveFontSize: (Float) -> Unit,
     onSaveVibrationDuration: (Float) -> Unit
 ) {
-    val darkPurple = Color(0xFF2A2A72)
+    val customYellow = Color(0xFFFBD713)
+    val deepBlue = Color(0xFF023C69)
     val context = LocalContext.current
     var vibrationDurationValue by remember { mutableStateOf(vibrationDuration) }
-    var fontSizeValue by remember { mutableStateOf(fontSize) }  // Load font size
+    var fontSizeValue by remember { mutableStateOf(fontSize) }
 
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(darkPurple)
+            .background(deepBlue)
     ) {
         Column(
             modifier = Modifier
@@ -123,7 +120,7 @@ fun SettingsScreen(
                 modifier = Modifier.padding(bottom = 8.dp)
             )
 
-            // Font Size Slider
+
             Row(
                 verticalAlignment = Alignment.CenterVertically,
                 modifier = Modifier.fillMaxWidth()
@@ -151,35 +148,19 @@ fun SettingsScreen(
 
             Spacer(modifier = Modifier.height(20.dp))
 
-            // Text that changes dynamically with the font size
+
             Text(
                 text = "This text changes size!",
                 color = Color.White,
-                fontSize = fontSizeValue.sp,  // Apply dynamic font size
+                fontSize = fontSizeValue.sp,
                 fontWeight = FontWeight.Bold,
                 modifier = Modifier.padding(vertical = 10.dp)
             )
 
-            Spacer(modifier = Modifier.height(40.dp))
-
-            // Save Font Size Button
-            Button(
-                onClick = { onSaveFontSize(fontSizeValue) },  // Save font size when clicked
-                modifier = Modifier.align(Alignment.CenterHorizontally),
-                colors = ButtonDefaults.buttonColors(containerColor = Color.Blue)
-            ) {
-                Text(
-                    text = "SAVE FONT SIZE",
-                    color = Color.White,
-                    fontSize = fontSizeValue.sp,  // Apply dynamic font size
-                    fontWeight = FontWeight.Bold
-                )
-            }
-
             Spacer(modifier = Modifier.height(20.dp))
 
             Text(
-                text = "VIBRATION DURATION (ms)",
+                text = "VIBRATION INTENSITY",
                 color = Color.White,
                 fontSize = 20.sp,
                 fontWeight = FontWeight.Bold,
@@ -194,7 +175,7 @@ fun SettingsScreen(
                     value = vibrationDurationValue,
                     onValueChange = { vibrationDurationValue = it },
                     valueRange = 0f..2000f,
-                    modifier = Modifier.weight(1f),
+                    modifier = Modifier.weight(50f),
                     colors = SliderDefaults.colors(
                         thumbColor = Color.White,
                         activeTrackColor = Color.White,
@@ -213,7 +194,7 @@ fun SettingsScreen(
 
             Spacer(modifier = Modifier.height(40.dp))
 
-            // Vibrate Button
+
             Button(
                 onClick = { onVibrate(vibrationDurationValue) },
                 modifier = Modifier.align(Alignment.CenterHorizontally),
@@ -221,37 +202,24 @@ fun SettingsScreen(
             ) {
                 Text(
                     text = "TEST VIBRATION",
-                    color = darkPurple,
-                    fontSize = fontSizeValue.sp,  // Apply font size
+                    color = deepBlue,
+                    fontSize = fontSizeValue.sp,
                     fontWeight = FontWeight.Bold
                 )
             }
 
             Spacer(modifier = Modifier.height(20.dp))
 
-            // Save Vibration Button
+
             Button(
-                onClick = { onSaveVibrationDuration(vibrationDurationValue) },
+                onClick = { onSaveVibrationDuration(vibrationDurationValue); onSaveFontSize(fontSizeValue)  },
                 modifier = Modifier.align(Alignment.CenterHorizontally),
-                colors = ButtonDefaults.buttonColors(containerColor = Color.Green)
+                colors = ButtonDefaults.buttonColors(containerColor = customYellow)
             ) {
                 Text(
                     text = "SAVE SETTINGS",
                     color = Color.White,
-                    fontSize = fontSizeValue.sp,  // Apply font size
-                    fontWeight = FontWeight.Bold
-                )
-            }
-
-            Button(
-                onClick = { },
-                modifier = Modifier.align(Alignment.CenterHorizontally),
-                colors = ButtonDefaults.buttonColors(containerColor = darkPurple)
-            ) {
-                Text(
-                    text = "ABOUT US",
-                    color = Color.White,
-                    fontSize = fontSizeValue.sp,  // Apply font size here too!
+                    fontSize = fontSizeValue.sp,
                     fontWeight = FontWeight.Bold
                 )
             }
