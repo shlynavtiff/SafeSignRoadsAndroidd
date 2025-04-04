@@ -9,6 +9,7 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material3.*
@@ -20,6 +21,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.input.KeyboardType
 
 class SettingsActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -29,21 +31,27 @@ class SettingsActivity : ComponentActivity() {
         val sharedPreferences = getSharedPreferences("settings", Context.MODE_PRIVATE)
         val savedVibrationDuration = sharedPreferences.getFloat("vibration_duration", 900f)
         val savedFontSize = sharedPreferences.getFloat("font_size", 19f)
-
+        val savedServerIp = sharedPreferences.getString("server_ip", "192.168.1.10") ?: "192.168.1.10" // Default if null
         setContent {
             SettingsScreen(
                 vibrationDuration = savedVibrationDuration,
                 fontSize = savedFontSize,
+                initialServerIp = savedServerIp,
                 onVibrate = { duration ->
                     vibratePhone(duration)
                     saveVibrationDuration(duration)
                 },
                 onSaveFontSize = { saveFontSize(it) },
                 onSaveVibrationDuration = { saveVibrationDuration(it) },
+                onSaveServerIp = { saveServerIp(it) }
+
             )
         }
     }
-
+    private fun saveServerIp(ip: String) {
+        val sharedPreferences = getSharedPreferences("settings", Context.MODE_PRIVATE)
+        sharedPreferences.edit().putString("server_ip", ip).apply()
+    }
     private fun vibratePhone(durationMs: Float) {
         val vibrator = if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.S) {
             val vibratorManager = getSystemService(Context.VIBRATOR_MANAGER_SERVICE) as VibratorManager
@@ -79,14 +87,18 @@ fun SettingsScreen(
     fontSize: Float,
     onVibrate: (Float) -> Unit,
     onSaveFontSize: (Float) -> Unit,
-    onSaveVibrationDuration: (Float) -> Unit
+    onSaveVibrationDuration: (Float) -> Unit,
+    onSaveServerIp: (String) -> Unit,
+    initialServerIp: String
+
 ) {
     val customYellow = Color(0xFFFBD713)
     val deepBlue = Color(0xFF023C69)
     val context = LocalContext.current
     var vibrationDurationValue by remember { mutableStateOf(vibrationDuration) }
     var fontSizeValue by remember { mutableStateOf(fontSize) }
-
+    var showSaveConfirmationDialog by remember { mutableStateOf(false) }
+    var serverIpValue by remember { mutableStateOf(initialServerIp) }
     Box(
         modifier = Modifier
             .fillMaxSize()
@@ -97,7 +109,30 @@ fun SettingsScreen(
                 .fillMaxSize()
                 .padding(16.dp)
         ) {
-
+            Text(
+                text = "SERVER IP ADDRESS",
+                color = Color.White,
+                fontSize = 20.sp, // Or use fontSizeValue.sp
+                fontWeight = FontWeight.Bold,
+                modifier = Modifier.padding(bottom = 8.dp)
+            )
+            OutlinedTextField( // Using OutlinedTextField for better visibility
+                value = serverIpValue,
+                onValueChange = { serverIpValue = it },
+                label = { Text("e.g., 192.168.1.15") },
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Uri), // Allows numbers and periods
+                singleLine = true,
+                modifier = Modifier.fillMaxWidth(),
+                colors = OutlinedTextFieldDefaults.colors( // Custom colors for dark background
+                    focusedTextColor = Color.White,
+                    unfocusedTextColor = Color.White,
+                    focusedBorderColor = Color.White,
+                    unfocusedBorderColor = Color.White.copy(alpha = 0.7f),
+                    focusedLabelColor = Color.White.copy(alpha = 0.7f),
+                    unfocusedLabelColor = Color.White.copy(alpha = 0.7f),
+                    cursorColor = customYellow
+                )
+            )
             IconButton(
                 onClick = { (context as? ComponentActivity)?.finish() },
                 modifier = Modifier.padding(top = 8.dp, bottom = 24.dp)
@@ -174,7 +209,7 @@ fun SettingsScreen(
                 Slider(
                     value = vibrationDurationValue,
                     onValueChange = { vibrationDurationValue = it },
-                    valueRange = 0f..2000f,
+                    valueRange = 500f..2000f,
                     modifier = Modifier.weight(50f),
                     colors = SliderDefaults.colors(
                         thumbColor = Color.White,
@@ -212,7 +247,7 @@ fun SettingsScreen(
 
 
             Button(
-                onClick = { onSaveVibrationDuration(vibrationDurationValue); onSaveFontSize(fontSizeValue)  },
+                onClick = { onSaveVibrationDuration(vibrationDurationValue); onSaveFontSize(fontSizeValue); onSaveServerIp(serverIpValue);showSaveConfirmationDialog = true  },
                 modifier = Modifier.align(Alignment.CenterHorizontally),
                 colors = ButtonDefaults.buttonColors(containerColor = customYellow)
             ) {
@@ -223,6 +258,19 @@ fun SettingsScreen(
                     fontWeight = FontWeight.Bold
                 )
             }
+        }
+        if (showSaveConfirmationDialog) {
+            AlertDialog(
+                onDismissRequest = { showSaveConfirmationDialog = false }, // Close dialog on clicking outside
+                title = { Text("Settings Saved") },
+                text = { Text("Your preferences have been updated successfully.") },
+                confirmButton = {
+                    Button(onClick = { showSaveConfirmationDialog = false }) { // OK button closes dialog
+                        Text("OK")
+                    }
+                }
+                // You can also add icon, dismissButton properties etc. if needed
+            )
         }
     }
 }

@@ -1,6 +1,7 @@
 package com.example.safesignroads
 
 import android.Manifest
+import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.net.Uri
@@ -10,54 +11,106 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.Image
-import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.content.ContextCompat
+import android.os.Build
+import android.util.Log
+import androidx.compose.runtime.LaunchedEffect
 
 class MainActivity : ComponentActivity() {
+
+    private fun startAudioService() {
+        if (!checkPermissions()) {
+            Log.w("MainActivity", "startAudioService attempted but permissions not granted.")
+            requestPermissions()
+            return
+        }
+
+        Log.i("MainActivity", ">>> startAudioService called <<<") // <-- ADD THIS LOG
+
+        val serviceIntent = Intent(this, AudioClassifierService::class.java)
+
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            startForegroundService(serviceIntent)
+        } else {
+            startService(serviceIntent)
+        }
+
+        Log.i("MainActivity", ">>> startForegroundService (or startService) command issued <<<") // <-- ADD THIS LOG
+    }
+
+    private fun stopAudioService() {
+        Log.i("MainActivity", "Attempting to stop AudioClassifierService...")
+        val serviceIntent = Intent(this, AudioClassifierService::class.java)
+        stopService(serviceIntent)
+    }
+    private fun loadFontSize() {
+        appFontSize = sharedPreferences.getFloat("font_size", 19f) // Use same key and default as SettingsActivity
+        Log.d("MainActivity", "Loaded font size: $appFontSize")
+    }
+    override fun onResume() {
+        super.onResume()
+        loadFontSize()
+    }
+    private lateinit var sharedPreferences: android.content.SharedPreferences
+    private var appFontSize by mutableStateOf(19f)
     override fun onCreate(savedInstanceState: Bundle?) {
+        sharedPreferences = getSharedPreferences("settings", Context.MODE_PRIVATE)
+        loadFontSize()
         super.onCreate(savedInstanceState)
         setContent {
+            val currentFontSize = appFontSize
             var showEnableDialog by remember { mutableStateOf(false) }
             var showDisableDialog by remember { mutableStateOf(false) }
             var showAboutDialog by remember { mutableStateOf(false) }
             var showInstructionsDialog by remember { mutableStateOf(false) }
-
+            var isServiceActive by remember { mutableStateOf(false) }
+            LaunchedEffect(Unit) {
+                if (!checkPermissions()){
+                    requestPermissions()
+                }
+                // Also check Notification permission specifically if targeting Android 13+
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) { // Android 13
+                    if (ContextCompat.checkSelfPermission(this@MainActivity, Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) {
+                        // You might want a separate launcher for this or include in requestPermissions
+                        // For simplicity, just noting it here - foreground services NEED this on 13+
+                        Log.w("MainActivity", "POST_NOTIFICATIONS permission might be needed for foreground service on Android 13+")
+                    }
+                }
+            }
             SafeSignRoadsApp(
                 onEnableClick = {
-                    val allPermissionsGranted = checkPermissions()
-                    if (allPermissionsGranted) {
-                        showEnableDialog = true
+                    if (checkPermissions()) {
+                        startAudioService()
+                        isServiceActive = true
+                        // Update UI state indication
+                        // Maybe dismiss the EnableDialog here if logic requires it
+                        // showEnableDialog = false // Assuming this state exists based on your original code
                     } else {
-                        requestPermissions()
+                        requestPermissions() // Request if missing when clicked
+                        // Show alert that permissions are needed
+                        // Alert(...)
                     }
                 },
                 onDisableClick = {
-                    showDisableDialog = true
+                    stopAudioService()
+                    isServiceActive = false // Update UI state indication
                 },
-                onSettingsClick = {
-                    openSettingsActivity()
-                },
-                onAboutClick = {
-                    showAboutDialog = true
-                },
-                onInstructionsClick = {
-                    showInstructionsDialog = true
-                },
+                onSettingsClick = { openSettingsActivity() },
+                onAboutClick = { showAboutDialog = true },
+                onInstructionsClick = { showInstructionsDialog = true },
                 showEnableDialog = showEnableDialog,
                 onDismissEnableDialog = { showEnableDialog = false },
                 showDisableDialog = showDisableDialog,
@@ -66,7 +119,8 @@ class MainActivity : ComponentActivity() {
                 onDismissAboutDialog = { showAboutDialog = false },
                 showInstructionsDialog = showInstructionsDialog,
                 onDismissInstructionsDialog = { showInstructionsDialog = false },
-                openAppSettings = { openAppSettings() }
+                openAppSettings = { openAppSettings() },
+                fontSize = appFontSize
             )
         }
     }
@@ -141,7 +195,8 @@ fun SafeSignRoadsApp(
     onDismissAboutDialog: () -> Unit,
     showInstructionsDialog: Boolean,
     onDismissInstructionsDialog: () -> Unit,
-    openAppSettings: () -> Unit
+    openAppSettings: () -> Unit,
+    fontSize: Float, // Add this parameter
 ) {
     val brightYellow = Color(0xFFFFDD00)
     val navyBlue = Color(0xFF003366)
@@ -162,26 +217,26 @@ fun SafeSignRoadsApp(
             horizontalAlignment = Alignment.CenterHorizontally,
             modifier = Modifier.fillMaxSize()
         ) {
-            Spacer(modifier = Modifier.height(330.dp))
+            Spacer(modifier = Modifier.height(420.dp))
 
 
-            YellowButton(text = "ENABLE", onClick = onEnableClick)
-
-            Spacer(modifier = Modifier.height(12.dp))
-
-            YellowButton(text = "DISABLE", onClick = onDisableClick)
+            YellowButton(text = "ENABLE", onClick = onEnableClick, fontSize = fontSize)
 
             Spacer(modifier = Modifier.height(12.dp))
 
-            YellowButton(text = "SETTINGS", onClick = onSettingsClick)
+            YellowButton(text = "DISABLE", onClick = onDisableClick, fontSize = fontSize)
 
             Spacer(modifier = Modifier.height(12.dp))
 
-            YellowButton(text = "ABOUT", onClick = onAboutClick)
+            YellowButton(text = "SETTINGS", onClick = onSettingsClick, fontSize = fontSize)
 
             Spacer(modifier = Modifier.height(12.dp))
 
-            YellowButton(text = "INSTRUCTIONS", onClick = onInstructionsClick)
+            YellowButton(text = "ABOUT", onClick = onAboutClick, fontSize = fontSize)
+
+            Spacer(modifier = Modifier.height(12.dp))
+
+            YellowButton(text = "INSTRUCTIONS", onClick = onInstructionsClick, fontSize = fontSize)
         }
 
 
@@ -261,44 +316,46 @@ fun SafeSignRoadsApp(
 }
 
 @Composable
-fun YellowButton(text: String, onClick: () -> Unit) {
+fun YellowButton(text: String, onClick: () -> Unit, fontSize: Float) {
     val brightYellow = Color(0xFFFFDD00)
     val navyBlue = Color(0xFF003366)
 
     Button(
         onClick = onClick,
         modifier = Modifier
-            .width(200.dp)
-            .height(40.dp),
+            .width(256.dp)
+            .height(48.dp),
         colors = ButtonDefaults.buttonColors(containerColor = brightYellow),
-        shape = RoundedCornerShape(20.dp)
+        shape = RoundedCornerShape(20.dp),
+        contentPadding = PaddingValues(horizontal = 16.dp, vertical = 4.dp)
     ) {
         Text(
             text = text,
             color = navyBlue,
-            fontSize = 16.sp,
+            fontSize = fontSize.sp, // Use the passed-in font size
             fontWeight = FontWeight.Bold
         )
     }
 }
 
-@Preview(showBackground = true)
-@Composable
-fun DefaultPreview() {
-    SafeSignRoadsApp(
-        onEnableClick = {},
-        onDisableClick = {},
-        onSettingsClick = {},
-        onAboutClick = {},
-        onInstructionsClick = {},
-        showEnableDialog = false,
-        onDismissEnableDialog = {},
-        showDisableDialog = false,
-        onDismissDisableDialog = {},
-        showAboutDialog = false,
-        onDismissAboutDialog = {},
-        showInstructionsDialog = false,
-        onDismissInstructionsDialog = {},
-        openAppSettings = {}
-    )
-}
+//@Preview(showBackground = true)
+//@Composable
+//fun DefaultPreview() {
+//    SafeSignRoadsApp(
+//        onEnableClick = {},
+//        onDisableClick = {},
+//        onSettingsClick = {},
+//        onAboutClick = {},
+//        onInstructionsClick = {},
+//        showEnableDialog = false,
+//        onDismissEnableDialog = {},
+//        showDisableDialog = false,
+//        onDismissDisableDialog = {},
+//        showAboutDialog = false,
+//        onDismissAboutDialog = {},
+//        showInstructionsDialog = false,
+//        onDismissInstructionsDialog = {},
+//        openAppSettings = {},
+//        fontSize = 12F
+//    )
+//}
