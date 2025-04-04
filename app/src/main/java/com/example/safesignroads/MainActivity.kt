@@ -38,7 +38,7 @@ class MainActivity : ComponentActivity() {
             return
         }
 
-        Log.i("MainActivity", ">>> startAudioService called <<<") // <-- ADD THIS LOG
+        Log.i("MainActivity", ">>> startAudioService called <<<")
 
         val serviceIntent = Intent(this, AudioClassifierService::class.java)
 
@@ -48,7 +48,7 @@ class MainActivity : ComponentActivity() {
             startService(serviceIntent)
         }
 
-        Log.i("MainActivity", ">>> startForegroundService (or startService) command issued <<<") // <-- ADD THIS LOG
+        Log.i("MainActivity", ">>> startForegroundService (or startService) command issued <<<")
     }
 
     private fun stopAudioService() {
@@ -57,7 +57,7 @@ class MainActivity : ComponentActivity() {
         stopService(serviceIntent)
     }
     private fun loadFontSize() {
-        appFontSize = sharedPreferences.getFloat("font_size", 19f) // Use same key and default as SettingsActivity
+        appFontSize = sharedPreferences.getFloat("font_size", 19f)
         Log.d("MainActivity", "Loaded font size: $appFontSize")
     }
     override fun onResume() {
@@ -81,11 +81,8 @@ class MainActivity : ComponentActivity() {
                 if (!checkPermissions()){
                     requestPermissions()
                 }
-                // Also check Notification permission specifically if targeting Android 13+
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) { // Android 13
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
                     if (ContextCompat.checkSelfPermission(this@MainActivity, Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) {
-                        // You might want a separate launcher for this or include in requestPermissions
-                        // For simplicity, just noting it here - foreground services NEED this on 13+
                         Log.w("MainActivity", "POST_NOTIFICATIONS permission might be needed for foreground service on Android 13+")
                     }
                 }
@@ -95,13 +92,8 @@ class MainActivity : ComponentActivity() {
                     if (checkPermissions()) {
                         startAudioService()
                         isServiceActive = true
-                        // Update UI state indication
-                        // Maybe dismiss the EnableDialog here if logic requires it
-                        // showEnableDialog = false // Assuming this state exists based on your original code
                     } else {
-                        requestPermissions() // Request if missing when clicked
-                        // Show alert that permissions are needed
-                        // Alert(...)
+                        requestPermissions()
                     }
                 },
                 onDisableClick = {

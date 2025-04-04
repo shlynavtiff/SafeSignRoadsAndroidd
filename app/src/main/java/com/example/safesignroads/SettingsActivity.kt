@@ -112,18 +112,18 @@ fun SettingsScreen(
             Text(
                 text = "SERVER IP ADDRESS",
                 color = Color.White,
-                fontSize = 20.sp, // Or use fontSizeValue.sp
+                fontSize = 20.sp,
                 fontWeight = FontWeight.Bold,
                 modifier = Modifier.padding(bottom = 8.dp)
             )
-            OutlinedTextField( // Using OutlinedTextField for better visibility
+            OutlinedTextField(
                 value = serverIpValue,
                 onValueChange = { serverIpValue = it },
                 label = { Text("e.g., 192.168.1.15") },
-                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Uri), // Allows numbers and periods
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Uri),
                 singleLine = true,
                 modifier = Modifier.fillMaxWidth(),
-                colors = OutlinedTextFieldDefaults.colors( // Custom colors for dark background
+                colors = OutlinedTextFieldDefaults.colors(
                     focusedTextColor = Color.White,
                     unfocusedTextColor = Color.White,
                     focusedBorderColor = Color.White,
@@ -269,7 +269,6 @@ fun SettingsScreen(
                         Text("OK")
                     }
                 }
-                // You can also add icon, dismissButton properties etc. if needed
             )
         }
     }
