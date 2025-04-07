@@ -27,7 +27,12 @@ import androidx.compose.ui.unit.sp
 import androidx.core.content.ContextCompat
 import android.os.Build
 import android.util.Log
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.buildAnnotatedString
+import androidx.compose.ui.text.withStyle
 
 class MainActivity : ComponentActivity() {
 
@@ -74,13 +79,13 @@ class MainActivity : ComponentActivity() {
             val currentFontSize = appFontSize
             var showEnableDialog by remember { mutableStateOf(false) }
             var showDisableDialog by remember { mutableStateOf(false) }
+            var showAlreadyEnabled by remember { mutableStateOf(false) }
+            var showAlreadyDisabled by remember { mutableStateOf(false) }
             var showAboutDialog by remember { mutableStateOf(false) }
             var showInstructionsDialog by remember { mutableStateOf(false) }
+            var showRequestPermissions by remember { mutableStateOf(false)}
             var isServiceActive by remember { mutableStateOf(false) }
             LaunchedEffect(Unit) {
-                if (!checkPermissions()){
-                    requestPermissions()
-                }
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
                     if (ContextCompat.checkSelfPermission(this@MainActivity, Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) {
                         Log.w("MainActivity", "POST_NOTIFICATIONS permission might be needed for foreground service on Android 13+")
@@ -89,16 +94,27 @@ class MainActivity : ComponentActivity() {
             }
             SafeSignRoadsApp(
                 onEnableClick = {
-                    if (checkPermissions()) {
-                        startAudioService()
-                        isServiceActive = true
-                    } else {
-                        requestPermissions()
+                    if (isServiceActive){
+                        showAlreadyEnabled = true
+                    } else{
+                        if (checkPermissions()) {
+                            startAudioService()
+                            isServiceActive = true
+                            showEnableDialog = true
+                        } else {
+                            showRequestPermissions = true
+                        }
                     }
+
                 },
                 onDisableClick = {
-                    stopAudioService()
-                    isServiceActive = false // Update UI state indication
+                    if (!isServiceActive){
+                        showAlreadyDisabled = true
+                    } else{
+                        stopAudioService()
+                        isServiceActive = false
+                        showDisableDialog = true
+                    }
                 },
                 onSettingsClick = { openSettingsActivity() },
                 onAboutClick = { showAboutDialog = true },
@@ -112,7 +128,14 @@ class MainActivity : ComponentActivity() {
                 showInstructionsDialog = showInstructionsDialog,
                 onDismissInstructionsDialog = { showInstructionsDialog = false },
                 openAppSettings = { openAppSettings() },
-                fontSize = appFontSize
+                fontSize = appFontSize,
+                showAlreadyEnabled = showAlreadyEnabled,
+                onDismissAlreadyEnabled = {showAlreadyEnabled = false},
+                showAlreadyDisabled = showAlreadyDisabled,
+                onDismissAlreadyDisabled = {showAlreadyDisabled = false},
+                showRequestPermissions = showRequestPermissions,
+                onDismissRequestPermissions = {showRequestPermissions = false},
+                onRequestPermission = {requestPermissions()}
             )
         }
     }
@@ -125,8 +148,6 @@ class MainActivity : ComponentActivity() {
     private fun checkPermissions(): Boolean {
         val requiredPermissions = arrayOf(
             Manifest.permission.RECORD_AUDIO,
-            Manifest.permission.ACCESS_FINE_LOCATION,
-            Manifest.permission.ACCESS_COARSE_LOCATION,
             Manifest.permission.POST_NOTIFICATIONS
         )
 
@@ -138,8 +159,6 @@ class MainActivity : ComponentActivity() {
     private fun requestPermissions() {
         val requiredPermissions = arrayOf(
             Manifest.permission.RECORD_AUDIO,
-            Manifest.permission.ACCESS_FINE_LOCATION,
-            Manifest.permission.ACCESS_COARSE_LOCATION,
             Manifest.permission.POST_NOTIFICATIONS
         )
 
@@ -189,6 +208,13 @@ fun SafeSignRoadsApp(
     onDismissInstructionsDialog: () -> Unit,
     openAppSettings: () -> Unit,
     fontSize: Float, // Add this parameter
+    showAlreadyDisabled: Boolean,
+    onDismissAlreadyEnabled: () -> Unit,
+    showAlreadyEnabled: Boolean,
+    onDismissAlreadyDisabled: () -> Unit,
+    showRequestPermissions: Boolean,
+    onDismissRequestPermissions: () -> Unit,
+    onRequestPermission: () -> Unit
 ) {
     val brightYellow = Color(0xFFFFDD00)
     val navyBlue = Color(0xFF003366)
@@ -201,7 +227,7 @@ fun SafeSignRoadsApp(
             painter = painterResource(id = R.drawable.bg),
             contentDescription = "Background",
             modifier = Modifier.fillMaxSize(),
-            contentScale = ContentScale.Crop
+            contentScale = ContentScale.FillHeight
         )
 
 
@@ -209,7 +235,7 @@ fun SafeSignRoadsApp(
             horizontalAlignment = Alignment.CenterHorizontally,
             modifier = Modifier.fillMaxSize()
         ) {
-            Spacer(modifier = Modifier.height(420.dp))
+            Spacer(modifier = Modifier.height(360.dp))
 
 
             YellowButton(text = "ENABLE", onClick = onEnableClick, fontSize = fontSize)
@@ -224,19 +250,65 @@ fun SafeSignRoadsApp(
 
             Spacer(modifier = Modifier.height(12.dp))
 
-            YellowButton(text = "ABOUT", onClick = onAboutClick, fontSize = fontSize)
+            YellowButton(text = "INSTRUCTIONS", onClick = onInstructionsClick, fontSize = fontSize)
 
             Spacer(modifier = Modifier.height(12.dp))
 
-            YellowButton(text = "INSTRUCTIONS", onClick = onInstructionsClick, fontSize = fontSize)
+            YellowButton(text = "ABOUT", onClick = onAboutClick, fontSize = fontSize)
         }
 
+
+        if (showRequestPermissions) {
+            AlertDialog(
+                onDismissRequest = onDismissRequestPermissions,
+                title = { Text("Allow Access to Microphone & Notifications", fontWeight = FontWeight.Bold, fontSize = fontSize.sp) },
+                text = { Text("This application requires access to your microphone and notifications to detect vehicle horns and emergency sirens to provide you vibration alerts. Please grant necessary permissions for the best experience.",
+                    fontSize = (fontSize * 0.9f).sp,
+                    lineHeight = (fontSize * 1.2f).sp) },
+                confirmButton = {
+                    Button(onClick = {onDismissRequestPermissions(); onRequestPermission() }) {
+                        Text("OK")
+                    }
+                }
+            )
+        }
+
+        if (showAlreadyEnabled) {
+            AlertDialog(
+                onDismissRequest = onDismissAlreadyEnabled,
+                title = { Text("Detection already started!", fontWeight = FontWeight.Bold, fontSize = fontSize.sp) },
+                text = { Text("Detection for Vehicle Horns and Sirens has already started and running in the background.",
+                    fontSize = (fontSize * 0.9f).sp,
+                    lineHeight = (fontSize * 1.2f).sp) },
+                confirmButton = {
+                    Button(onClick = onDismissAlreadyEnabled) {
+                        Text("OK")
+                    }
+                }
+            )
+        }
+        if (showAlreadyDisabled) {
+            AlertDialog(
+                onDismissRequest = onDismissAlreadyDisabled,
+                title = { Text("Detection is currently disabled.", fontWeight = FontWeight.Bold, fontSize = fontSize.sp) },
+                text = { Text("Enable the detection first!",
+                    fontSize = (fontSize * 0.9f).sp,
+                    lineHeight = (fontSize * 1.2f).sp) },
+                confirmButton = {
+                    Button(onClick = onDismissAlreadyDisabled) {
+                        Text("OK")
+                    }
+                }
+            )
+        }
 
         if (showEnableDialog) {
             AlertDialog(
                 onDismissRequest = onDismissEnableDialog,
-                title = { Text("Permissions Granted") },
-                text = { Text("Already enabled!") },
+                title = { Text("Detection started.", fontWeight = FontWeight.Bold, fontSize = fontSize.sp) },
+                text = { Text("Detection for Vehicle Horns and Sirens has Started",
+                    fontSize = (fontSize * 0.9f).sp,
+                    lineHeight = (fontSize * 1.2f).sp) },
                 confirmButton = {
                     Button(onClick = onDismissEnableDialog) {
                         Text("OK")
@@ -248,36 +320,78 @@ fun SafeSignRoadsApp(
         if (showDisableDialog) {
             AlertDialog(
                 onDismissRequest = onDismissDisableDialog,
-                title = { Text("Disable Permissions") },
-                text = { Text("To disable permissions, go to App Settings and revoke them manually.") },
+                title = { Text("Detection stopped.", fontWeight = FontWeight.Bold, fontSize = fontSize.sp) },
+                text = { Text("Detection for Vehicle Horns and Sirens has stopped.",
+                    fontSize = (fontSize * 0.9f).sp,
+                    lineHeight = (fontSize * 1.2f).sp) },
                 confirmButton = {
                     Button(onClick = {
-                        openAppSettings()
                         onDismissDisableDialog()
                     }) {
-                        Text("Open Settings")
+                        Text("OK")
                     }
                 },
-                dismissButton = {
-                    Button(onClick = onDismissDisableDialog) {
-                        Text("Cancel")
-                    }
-                }
             )
         }
 
         if (showAboutDialog) {
             AlertDialog(
                 onDismissRequest = onDismissAboutDialog,
-                title = { Text("About SafeSign Roads") },
+                title = { Text("About SafeSign Roads", fontWeight = FontWeight.Bold, fontSize = fontSize.sp) },
                 text = {
+                    val scrollState = rememberScrollState()
+                    Column(
+                        modifier = Modifier
+                            .heightIn(max = 360.dp) // Set a max height for the text area
+                            .verticalScroll(scrollState) // Make it scrollable
+                    ) {
                     Text(
-                        "SafeSign Roads is an innovative application designed to enhance road safety " +
-                                "by utilizing advanced audio and location technologies to detect and alert " +
-                                "users about potential road hazards."
+                        buildAnnotatedString {
+                            withStyle(style = SpanStyle(fontWeight = FontWeight.Bold)) {
+                                append("What do we offer?\n")
+                            }
+                            withStyle(style = SpanStyle(fontWeight = FontWeight.Bold)) {
+                                append("• Real-Time Sound Detection")
+                            }
+                            append(" – The app detects vehicle horns and ambulance sirens.\n")
+
+                            withStyle(style = SpanStyle(fontWeight = FontWeight.Bold)) {
+                                append("• Instant Alerts")
+                            }
+                            append(" – Receive vibration and visual notifications when sounds are detected.\n")
+
+                            withStyle(style = SpanStyle(fontWeight = FontWeight.Bold)) {
+                                append("• Increased Awareness")
+                            }
+                            append(" – Stay informed of approaching vehicles, even in noisy environments.\n")
+
+                            withStyle(style = SpanStyle(fontWeight = FontWeight.Bold)) {
+                                append("• Easy & Reliable")
+                            }
+                            append(" – Designed with a simple interface for quick and effortless use.\n\n")
+
+                            withStyle(style = SpanStyle(fontWeight = FontWeight.Bold)) {
+                                append("Meet the Developers\n")
+                            }
+                            append("SafeSign Roads was developed by ")
+                            withStyle(style = SpanStyle(fontWeight = FontWeight.Bold)) {
+                                append("Mariel A. Cuerdo")
+                            }
+                            append(" and ")
+                            withStyle(style = SpanStyle(fontWeight = FontWeight.Bold)) {
+                                append("Lynx J. Macasaet")
+                            }
+                            append(", dedicated developers passionate about using technology to create a safer world for the deaf community. Their mission is to bridge the communication gap between pedestrians and road safety through inclusive solutions.\n\n")
+
+                            append("Walk safely. Stay aware. Let SafeSign Roads guide you.\n")
+                        },
+                        fontSize = (fontSize * 0.9f).sp,
+                        lineHeight = (fontSize * 1.2f).sp
                     )
+                    }
                 },
-                confirmButton = {
+
+                        confirmButton = {
                     Button(onClick = onDismissAboutDialog) {
                         Text("Close")
                     }
@@ -288,14 +402,50 @@ fun SafeSignRoadsApp(
         if (showInstructionsDialog) {
             AlertDialog(
                 onDismissRequest = onDismissInstructionsDialog,
-                title = { Text("How to Use SafeSign Roads") },
+                title = { Text("How to Use SafeSign Roads", fontWeight = FontWeight.Bold, fontSize = fontSize.sp) },
                 text = {
-                    Text(
-                        "1. Enable the app by granting necessary permissions\n" +
-                                "2. The app will run in the background, monitoring road conditions\n" +
-                                "3. You'll receive alerts for potential hazards based on audio and location data\n" +
-                                "4. Customize settings in the Settings menu as needed"
-                    )
+                    val scrollState = rememberScrollState()
+                    Column(
+                        modifier = Modifier
+                            .heightIn(max = 360.dp) // Set a max height for the text area
+                            .verticalScroll(scrollState) // Make it scrollable
+                    ) {
+                        Text(
+                            text = buildAnnotatedString {
+                                // Features
+                                withStyle(style = SpanStyle(fontWeight = FontWeight.Bold)) {
+                                    append("Enable")
+                                }
+                                append(" – This will start monitoring for vehicle horns and sirens.\n")
+
+                                withStyle(style = SpanStyle(fontWeight = FontWeight.Bold)) {
+                                    append("Disable")
+                                }
+                                append(" – Revokes previously granted permissions, preventing the app from accessing the microphone, vibration, and notifications.\n")
+
+                                withStyle(style = SpanStyle(fontWeight = FontWeight.Bold)) {
+                                    append("Settings")
+                                }
+                                append(" – Customize your experience by adjusting font size and vibration intensity.\n")
+
+                                append("Also, the developer will provide an IP address for real-time detection.\n")
+
+                                withStyle(style = SpanStyle(fontWeight = FontWeight.Bold)) {
+                                    append("About")
+                                }
+                                append(" – Learn more about SafeSign Roads, how it works, and the team behind its development.\n\n")
+
+                                // Note
+                                withStyle(style = SpanStyle(fontWeight = FontWeight.Bold)) {
+                                    append("Important Note:")
+                                }
+                                append(" To ensure the vibration feature works correctly, check your phone’s settings and make sure all vibration settings are enabled.")
+                            },
+                            fontSize = (fontSize * 0.9f).sp,
+                            lineHeight = (fontSize * 1.2f).sp
+
+                        )
+                    }
                 },
                 confirmButton = {
                     Button(onClick = onDismissInstructionsDialog) {

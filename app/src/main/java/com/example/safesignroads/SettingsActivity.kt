@@ -262,8 +262,11 @@ fun SettingsScreen(
         if (showSaveConfirmationDialog) {
             AlertDialog(
                 onDismissRequest = { showSaveConfirmationDialog = false }, // Close dialog on clicking outside
-                title = { Text("Settings Saved") },
-                text = { Text("Your preferences have been updated successfully.") },
+                title = { Text("Settings Saved", fontSize = fontSizeValue.sp, fontWeight = FontWeight.Bold,
+                    lineHeight = (fontSizeValue * 1.2f).sp) },
+                text = { Text("Your preferences have been updated successfully.",
+                    fontSize = (fontSizeValue * 0.9f).sp,
+                    lineHeight = (fontSizeValue * 1.2f).sp) },
                 confirmButton = {
                     Button(onClick = { showSaveConfirmationDialog = false }) { // OK button closes dialog
                         Text("OK")
