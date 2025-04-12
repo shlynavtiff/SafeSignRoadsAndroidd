@@ -10,7 +10,7 @@ android {
 
     defaultConfig {
         applicationId = "com.example.safesignroads"
-        minSdk = 24
+        minSdk = 26
         targetSdk = 35
         versionCode = 1
         versionName = "1.0"
@@ -40,6 +40,8 @@ android {
 }
 
 dependencies {
+    implementation(files(fileTree(mapOf("dir" to "libs", "include" to listOf("*.jar")))))
+    implementation("org.tensorflow:tensorflow-lite:2.15.0")
     implementation("androidx.navigation:navigation-compose:2.7.5")
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.lifecycle.runtime.ktx)
