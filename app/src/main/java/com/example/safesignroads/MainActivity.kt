@@ -342,8 +342,8 @@ fun SafeSignRoadsApp(
                     val scrollState = rememberScrollState()
                     Column(
                         modifier = Modifier
-                            .heightIn(max = 360.dp) // Set a max height for the text area
-                            .verticalScroll(scrollState) // Make it scrollable
+                            .heightIn(max = 360.dp)
+                            .verticalScroll(scrollState)
                     ) {
                     Text(
                         buildAnnotatedString {
@@ -407,12 +407,11 @@ fun SafeSignRoadsApp(
                     val scrollState = rememberScrollState()
                     Column(
                         modifier = Modifier
-                            .heightIn(max = 360.dp) // Set a max height for the text area
-                            .verticalScroll(scrollState) // Make it scrollable
+                            .heightIn(max = 360.dp)
+                            .verticalScroll(scrollState)
                     ) {
                         Text(
                             text = buildAnnotatedString {
-                                // Features
                                 withStyle(style = SpanStyle(fontWeight = FontWeight.Bold)) {
                                     append("Enable")
                                 }
@@ -435,7 +434,6 @@ fun SafeSignRoadsApp(
                                 }
                                 append(" – Learn more about SafeSign Roads, how it works, and the team behind its development.\n\n")
 
-                                // Note
                                 withStyle(style = SpanStyle(fontWeight = FontWeight.Bold)) {
                                     append("Important Note:")
                                 }
@@ -474,30 +472,8 @@ fun YellowButton(text: String, onClick: () -> Unit, fontSize: Float) {
         Text(
             text = text,
             color = navyBlue,
-            fontSize = fontSize.sp, // Use the passed-in font size
+            fontSize = fontSize.sp,
             fontWeight = FontWeight.Bold
         )
     }
 }
-
-//@Preview(showBackground = true)
-//@Composable
-//fun DefaultPreview() {
-//    SafeSignRoadsApp(
-//        onEnableClick = {},
-//        onDisableClick = {},
-//        onSettingsClick = {},
-//        onAboutClick = {},
-//        onInstructionsClick = {},
-//        showEnableDialog = false,
-//        onDismissEnableDialog = {},
-//        showDisableDialog = false,
-//        onDismissDisableDialog = {},
-//        showAboutDialog = false,
-//        onDismissAboutDialog = {},
-//        showInstructionsDialog = false,
-//        onDismissInstructionsDialog = {},
-//        openAppSettings = {},
-//        fontSize = 12F
-//    )
-//}
