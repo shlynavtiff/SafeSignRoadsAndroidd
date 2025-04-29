@@ -44,14 +44,11 @@ class SettingsActivity : ComponentActivity() {
             SettingsScreen(
                 vibrationDuration = savedVibrationDuration,
                 fontSize = savedFontSize,
-                // Pass the loaded thresholds to the composable
                 initialCarHornThreshold = savedCarHornThreshold,
                 initialEmergencyVehicleThreshold = savedEmergencyVehicleThreshold,
                 onVibrate = { duration ->
                     vibratePhone(duration)
-                    // Save vibration duration immediately when testing? Or only on main save?
-                    // Currently saves on main save button. Let's keep it that way for consistency.
-                    // saveVibrationDuration(duration)
+
                 },
                 onSaveFontSize = { saveFontSize(it) },
                 onSaveVibrationDuration = { saveVibrationDuration(it) },
