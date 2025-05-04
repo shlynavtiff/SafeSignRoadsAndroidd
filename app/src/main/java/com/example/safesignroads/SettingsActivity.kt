@@ -25,8 +25,8 @@ import androidx.compose.ui.platform.LocalContext
 import kotlin.math.roundToInt // Added for formatting threshold text
 
 class SettingsActivity : ComponentActivity() {
-    private val DEFAULT_CAR_HORN_THRESHOLD = 0.15f
-    private val DEFAULT_EMERGENCY_VEHICLE_THRESHOLD = 0.14f
+    private val DEFAULT_CAR_HORN_THRESHOLD = 0.14f
+    private val DEFAULT_EMERGENCY_VEHICLE_THRESHOLD = 0.30f
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -34,24 +34,18 @@ class SettingsActivity : ComponentActivity() {
         val sharedPreferences = getSharedPreferences("settings", Context.MODE_PRIVATE)
         val savedVibrationDuration = sharedPreferences.getFloat("vibration_duration", 900f)
         val savedFontSize = sharedPreferences.getFloat("font_size", 19f)
-        val savedCarHornThreshold = sharedPreferences.getFloat("car_horn_threshold", DEFAULT_CAR_HORN_THRESHOLD)
-        val savedEmergencyVehicleThreshold = sharedPreferences.getFloat("emergency_vehicle_threshold", DEFAULT_EMERGENCY_VEHICLE_THRESHOLD)
 
 
         setContent {
             SettingsScreen(
                 vibrationDuration = savedVibrationDuration,
                 fontSize = savedFontSize,
-                initialCarHornThreshold = savedCarHornThreshold,
-                initialEmergencyVehicleThreshold = savedEmergencyVehicleThreshold,
                 onVibrate = { duration ->
                     vibratePhone(duration)
 
                 },
                 onSaveFontSize = { saveFontSize(it) },
                 onSaveVibrationDuration = { saveVibrationDuration(it) },
-                onSaveCarHornThreshold = { saveCarHornThreshold(it) },
-                onSaveEmergencyVehicleThreshold = { saveEmergencyVehicleThreshold(it) }
             )
         }
     }
@@ -85,36 +79,21 @@ class SettingsActivity : ComponentActivity() {
         sharedPreferences.edit().putFloat("font_size", size).apply()
     }
 
-    private fun saveCarHornThreshold(threshold: Float) {
-        val sharedPreferences = getSharedPreferences("settings", Context.MODE_PRIVATE)
-        sharedPreferences.edit().putFloat("car_horn_threshold", threshold).apply()
-    }
-
-    private fun saveEmergencyVehicleThreshold(threshold: Float) {
-        val sharedPreferences = getSharedPreferences("settings", Context.MODE_PRIVATE)
-        sharedPreferences.edit().putFloat("emergency_vehicle_threshold", threshold).apply()
-    }
 }
 
 @Composable
 fun SettingsScreen(
     vibrationDuration: Float,
     fontSize: Float,
-    initialCarHornThreshold: Float,
-    initialEmergencyVehicleThreshold: Float,
     onVibrate: (Float) -> Unit,
     onSaveFontSize: (Float) -> Unit,
     onSaveVibrationDuration: (Float) -> Unit,
-    onSaveCarHornThreshold: (Float) -> Unit,
-    onSaveEmergencyVehicleThreshold: (Float) -> Unit
 ) {
     val customYellow = Color(0xFFFBD713)
     val deepBlue = Color(0xFF023C69)
     val context = LocalContext.current
     var vibrationDurationValue by remember { mutableStateOf(vibrationDuration) }
     var fontSizeValue by remember { mutableStateOf(fontSize) }
-    var carHornThresholdValue by remember { mutableStateOf(initialCarHornThreshold) }
-    var emergencyVehicleThresholdValue by remember { mutableStateOf(initialEmergencyVehicleThreshold) }
 
     var showSaveConfirmationDialog by remember { mutableStateOf(false) }
 
@@ -230,79 +209,10 @@ fun SettingsScreen(
             }
             Spacer(modifier = Modifier.height(20.dp))
 
-
-            Text(
-                text = "CAR HORN THRESHOLD",
-                color = Color.White,
-                fontSize = 20.sp,
-                fontWeight = FontWeight.Bold,
-                modifier = Modifier.padding(bottom = 8.dp)
-            )
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                Slider(
-                    value = carHornThresholdValue,
-                    onValueChange = { carHornThresholdValue = it },
-                    valueRange = 0.01f..0.5f,
-                    modifier = Modifier.weight(1f),
-                    colors = SliderDefaults.colors(
-                        thumbColor = Color.White,
-                        activeTrackColor = Color.White,
-                        inactiveTrackColor = Color.White.copy(alpha = 0.3f)
-                    )
-                )
-                Text(
-                    text = String.format("%.2f", carHornThresholdValue),
-                    color = Color.White,
-                    fontSize = 24.sp,
-                    fontWeight = FontWeight.Bold,
-                    modifier = Modifier.padding(start = 16.dp)
-                )
-            }
-            Spacer(modifier = Modifier.height(20.dp))
-
-
-            Text(
-                text = "EMERGENCY VEHICLE THRESHOLD",
-                color = Color.White,
-                fontSize = 20.sp, // Fixed size
-                fontWeight = FontWeight.Bold,
-                modifier = Modifier.padding(bottom = 8.dp)
-            )
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                Slider(
-                    value = emergencyVehicleThresholdValue,
-                    onValueChange = { emergencyVehicleThresholdValue = it },
-                    valueRange = 0.01f..0.5f,
-                    modifier = Modifier.weight(1f),
-                    colors = SliderDefaults.colors(
-                        thumbColor = Color.White,
-                        activeTrackColor = Color.White,
-                        inactiveTrackColor = Color.White.copy(alpha = 0.3f)
-                    )
-                )
-                Text(
-                    text = String.format("%.2f", emergencyVehicleThresholdValue),
-                    color = Color.White,
-                    fontSize = 24.sp, // Fixed size
-                    fontWeight = FontWeight.Bold,
-                    modifier = Modifier.padding(start = 16.dp)
-                )
-            }
-            Spacer(modifier = Modifier.height(40.dp))
-
-
             Button(
                 onClick = {
                     onSaveVibrationDuration(vibrationDurationValue)
                     onSaveFontSize(fontSizeValue)
-                    onSaveCarHornThreshold(carHornThresholdValue)
-                    onSaveEmergencyVehicleThreshold(emergencyVehicleThresholdValue)
                     showSaveConfirmationDialog = true
                 },
                 modifier = Modifier.align(Alignment.CenterHorizontally),

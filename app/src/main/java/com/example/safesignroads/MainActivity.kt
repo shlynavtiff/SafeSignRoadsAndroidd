@@ -427,8 +427,6 @@ fun SafeSignRoadsApp(
                                 }
                                 append(" – Customize your experience by adjusting font size and vibration intensity.\n")
 
-                                append("Also, the developer will provide an IP address for real-time detection.\n")
-
                                 withStyle(style = SpanStyle(fontWeight = FontWeight.Bold)) {
                                     append("About")
                                 }

@@ -98,8 +98,8 @@ class AudioClassifierService : Service() {
     private var lastDetectionTime: Long = 0L
     private var vibrationDuration: Float = 500f // Default
 
-    private var carHornRmsThreshold: Float = DEFAULT_CAR_HORN_THRESHOLD
-    private var emergencyVehicleRmsThreshold: Float = DEFAULT_EMERGENCY_VEHICLE_THRESHOLD
+    private var carHornRmsThreshold = 0.14f
+    private var emergencyVehicleRmsThreshold = 0.30f
 
     private val labelMap = mapOf(0 to "car_horn", 1 to "emergency_vehicle", 2 to "traffic")
     private val backgroundLabel = "background" // Label for ignored sounds
@@ -113,6 +113,7 @@ class AudioClassifierService : Service() {
         val startOffset = fileDescriptor.startOffset
         val declaredLength = fileDescriptor.declaredLength
         Log.d(TAG, "Loading TFLite model file: $modelFileName")
+        Log.i(TAG, "car thresh: $carHornRmsThreshold, vehicle thresh: $emergencyVehicleRmsThreshold")
         val mappedByteBuffer = fileChannel.map(FileChannel.MapMode.READ_ONLY, startOffset, declaredLength)
         fileChannel.close()
         inputStream.close()
@@ -122,7 +123,6 @@ class AudioClassifierService : Service() {
 
     private fun processAudioChunkNatively(chunkBytes: ByteArray) {
         Log.i(TAG, "--- processAudioChunkNatively called ---")
-
         if (chunkBytes.size != bytesPerChunk) { Log.e(TAG, "Incorrect chunk size: ${chunkBytes.size}, expected $bytesPerChunk"); return }
         val audioSamples = FloatArray(samplesPerChunk)
         val byteBuffer = ByteBuffer.wrap(chunkBytes).order(ByteOrder.LITTLE_ENDIAN)
@@ -359,8 +359,8 @@ class AudioClassifierService : Service() {
 
         vibratePhone(vibrationDuration)
 
-        val title = if (isEmergency) "Emergency Vehicle Alert! 🚨" else "Car Horn Alert! 🔊"
-        val body = if (isEmergency) "Emergency vehicle detected nearby!" else "Car horn detected nearby!"
+        val title = if (isEmergency) "Emergency Vehicle Alert! 🚨" else "Vehicle Horn Alert! 🔊"
+        val body = if (isEmergency) "Emergency vehicle detected nearby!" else "Vehicle horn detected nearby!"
 
         try {
             val notificationManager = NotificationManagerCompat.from(this)
@@ -400,10 +400,8 @@ class AudioClassifierService : Service() {
 
     private fun loadSettings() {
         vibrationDuration = sharedPreferences.getFloat("vibration_duration", 500f)
-        carHornRmsThreshold = sharedPreferences.getFloat("car_horn_threshold", DEFAULT_CAR_HORN_THRESHOLD)
-        emergencyVehicleRmsThreshold = sharedPreferences.getFloat("emergency_vehicle_threshold", DEFAULT_EMERGENCY_VEHICLE_THRESHOLD)
 
-        Log.d(TAG, "Settings loaded: VibDuration=$vibrationDuration, HornThr=$carHornRmsThreshold, EmergThr=$emergencyVehicleRmsThreshold")
+        Log.d(TAG, "Settings loaded: VibDuration=$vibrationDuration")
     }
 
     private fun vibratePhone(durationMs: Float) {
